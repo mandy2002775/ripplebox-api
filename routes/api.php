@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\ClientDashboardController;
+use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\RewardController;
 use App\Http\Controllers\Api\SalonController;
 use App\Http\Controllers\Api\SalonDashboardController;
@@ -19,10 +21,14 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/auth/logout', [OtpAuthController::class, 'logout']);
+    Route::get('/salons', [SalonController::class, 'index']);
     Route::post('/salons', [SalonController::class, 'store']);
     Route::get('/salons/dashboard', [SalonDashboardController::class, 'show']);
 
     Route::get('/rewards', [RewardController::class, 'index']);
     Route::post('/rewards', [RewardController::class, 'store']);
     Route::patch('/rewards/{reward}', [RewardController::class, 'update']);
+
+    Route::post('/referrals', [ReferralController::class, 'store']);
+    Route::get('/clients/dashboard', [ClientDashboardController::class, 'show']);
 });

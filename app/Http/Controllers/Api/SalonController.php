@@ -12,6 +12,18 @@ use Illuminate\Validation\ValidationException;
 class SalonController extends Controller
 {
     /**
+     * List salons for client-side discovery (screen 7's "Nearby salons").
+     * No geo-distance sort yet — that needs Google Places, which isn't
+     * wired up — so this is ordered by name for now.
+     */
+    public function index(): JsonResponse
+    {
+        return response()->json(
+            Salon::orderBy('business_name')->get(['id', 'business_name', 'location'])
+        );
+    }
+
+    /**
      * Create the business profile for the authenticated salon owner.
      * One salon per user — this is a one-time setup step (screen 3),
      * not a general-purpose update endpoint.
