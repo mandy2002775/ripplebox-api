@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ClientDashboardController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\RewardController;
 use App\Http\Controllers\Api\SalonController;
@@ -30,5 +31,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/rewards/{reward}', [RewardController::class, 'update']);
 
     Route::post('/referrals', [ReferralController::class, 'store']);
+    Route::patch('/referrals/{referral}/complete', [ReferralController::class, 'complete']);
     Route::get('/clients/dashboard', [ClientDashboardController::class, 'show']);
+
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
 });

@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ReferralStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
+use App\Models\Redemption;
 use App\Models\Referral;
+use App\Models\Reward;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ReferralController extends Controller
@@ -65,6 +69,72 @@ class ReferralController extends Controller
             'status' => 'pending',
         ]);
 
-        return response()->json($referral->load('salon'), 201);
+        $referral->load('salon.user');
+        $referral->salon->user->notifications()->create([
+            'type' => 'referral_redeemed',
+            'payload' => [
+                'referral_id' => $referral->id,
+                'referrer_name' => $referrer->user->name,
+                'referred_name' => $client->user->name,
+            ],
+        ]);
+
+        return response()->json($referral, 201);
+    }
+
+    /**
+     * The salon marks a pending referral complete once the referred
+     * client actually shows up and gets serviced, picking which of the
+     * salon's active rewards to pay out. This is what turns a redemption
+     * event into something both the salon's and the clients' dashboards
+     * actually show.
+     */
+    public function complete(Request $request, Referral $referral): JsonResponse
+    {
+        $salon = $request->user()->salon;
+
+        if (! $salon || $referral->salon_id !== $salon->id) {
+            abort(403, 'This referral does not belong to your business.');
+        }
+
+        if ($referral->status === ReferralStatus::Redeemed) {
+            throw ValidationException::withMessages([
+                'referral' => 'This referral has already been completed.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'reward_id' => [
+                'required',
+                'uuid',
+                Rule::exists('rewards', 'id')
+                    ->where('salon_id', $salon->id)
+                    ->where('is_active', true),
+            ],
+        ]);
+
+        $redemption = Redemption::create([
+            'referral_id' => $referral->id,
+            'reward_id' => $data['reward_id'],
+            'redeemed_at' => now(),
+        ]);
+
+        $referral->update(['status' => ReferralStatus::Redeemed]);
+
+        $reward = Reward::findOrFail($data['reward_id']);
+        $referral->load('referrer.user', 'referred.user');
+        foreach ([$referral->referrer->user, $referral->referred->user] as $recipient) {
+            $recipient->notifications()->create([
+                'type' => 'reward_earned',
+                'payload' => [
+                    'referral_id' => $referral->id,
+                    'reward_description' => $reward->description,
+                    'reward_value' => (float) $reward->reward_value,
+                    'salon_name' => $salon->business_name,
+                ],
+            ]);
+        }
+
+        return response()->json($redemption->load('reward', 'referral'));
     }
 }
