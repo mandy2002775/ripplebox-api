@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\RewardController;
 use App\Http\Controllers\Api\SalonController;
+use App\Http\Controllers\Api\SalonDashboardController;
 use App\Http\Controllers\Auth\OtpAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,4 +20,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/auth/logout', [OtpAuthController::class, 'logout']);
     Route::post('/salons', [SalonController::class, 'store']);
+    Route::get('/salons/dashboard', [SalonDashboardController::class, 'show']);
+
+    Route::get('/rewards', [RewardController::class, 'index']);
+    Route::post('/rewards', [RewardController::class, 'store']);
+    Route::patch('/rewards/{reward}', [RewardController::class, 'update']);
 });
