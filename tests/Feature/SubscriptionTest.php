@@ -30,7 +30,7 @@ class SubscriptionTest extends TestCase
         $periodEnd = $response->json('current_period_end');
         $this->assertNotNull($periodEnd);
         $this->assertEqualsWithDelta(
-            now()->addDays(14)->timestamp,
+            now()->addDays(30)->timestamp,
             \Illuminate\Support\Carbon::parse($periodEnd)->timestamp,
             5
         );

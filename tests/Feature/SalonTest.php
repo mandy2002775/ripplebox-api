@@ -68,4 +68,34 @@ class SalonTest extends TestCase
         $response->assertOk();
         $response->assertJsonFragment(['id' => $salon->id, 'logo_url' => 'https://example.com/logo.png']);
     }
+
+    public function test_a_salon_owner_can_edit_their_existing_profile(): void
+    {
+        $salon = Salon::factory()->create(['business_name' => 'Old Name']);
+        Sanctum::actingAs($salon->user);
+
+        $response = $this->patchJson('/api/salons', [
+            'business_name' => 'New Name',
+            'instagram_handle' => '@newname',
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('salons', [
+            'id' => $salon->id,
+            'business_name' => 'New Name',
+            'instagram_handle' => '@newname',
+        ]);
+    }
+
+    public function test_a_salon_cannot_edit_a_profile_that_does_not_exist_yet(): void
+    {
+        $user = User::factory()->salon()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->patchJson('/api/salons', [
+            'business_name' => 'New Name',
+        ]);
+
+        $response->assertUnprocessable();
+    }
 }

@@ -25,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [OtpAuthController::class, 'logout']);
     Route::get('/salons', [SalonController::class, 'index']);
     Route::post('/salons', [SalonController::class, 'store']);
+    Route::patch('/salons', [SalonController::class, 'update']);
     Route::get('/salons/dashboard', [SalonDashboardController::class, 'show']);
     Route::post('/salons/subscription', [SubscriptionController::class, 'store']);
     Route::delete('/salons/subscription', [SubscriptionController::class, 'destroy']);

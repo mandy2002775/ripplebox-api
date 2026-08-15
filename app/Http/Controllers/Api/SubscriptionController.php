@@ -15,7 +15,7 @@ class SubscriptionController extends Controller
     /**
      * Step 2 of salon onboarding: pick a plan and start a trial. No billing
      * integration exists yet, so this just records the plan choice and a
-     * 14-day trial window rather than charging anything.
+     * 30-day trial window rather than charging anything.
      */
     public function store(Request $request): JsonResponse
     {
@@ -40,7 +40,7 @@ class SubscriptionController extends Controller
         $subscription = $salon->subscriptions()->create([
             'plan_type' => $data['plan_type'],
             'status' => SubscriptionStatus::Trialing,
-            'current_period_end' => now()->addDays(14),
+            'current_period_end' => now()->addDays(30),
         ]);
 
         return response()->json($subscription, 201);

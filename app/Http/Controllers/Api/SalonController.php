@@ -25,8 +25,8 @@ class SalonController extends Controller
 
     /**
      * Create the business profile for the authenticated salon owner.
-     * One salon per user — this is a one-time setup step (screen 3),
-     * not a general-purpose update endpoint.
+     * One salon per user — this is a one-time setup step (screen 3).
+     * Editing an existing profile is `update()` below, not this.
      */
     public function store(Request $request): JsonResponse
     {
@@ -59,5 +59,34 @@ class SalonController extends Controller
         ]);
 
         return response()->json($salon, 201);
+    }
+
+    /**
+     * Edit an existing business profile — the settings-gear icon on the
+     * salon dashboard routes back to the same profile-setup form, but for
+     * editing rather than one-time creation.
+     */
+    public function update(Request $request): JsonResponse
+    {
+        $salon = $request->user()->salon;
+
+        if (! $salon) {
+            throw ValidationException::withMessages([
+                'salon' => 'Complete your business profile first.',
+            ]);
+        }
+
+        $data = $request->validate([
+            'business_name' => ['sometimes', 'string', 'max:255'],
+            'location' => ['sometimes', 'string', 'max:255'],
+            'website' => ['nullable', 'string', 'max:255'],
+            'instagram_handle' => ['nullable', 'string', 'max:255'],
+            'google_place_id' => ['nullable', 'string', 'max:255'],
+            'logo_url' => ['nullable', 'string', 'max:2048'],
+        ]);
+
+        $salon->update($data);
+
+        return response()->json($salon);
     }
 }
