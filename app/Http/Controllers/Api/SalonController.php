@@ -19,7 +19,7 @@ class SalonController extends Controller
     public function index(): JsonResponse
     {
         return response()->json(
-            Salon::orderBy('business_name')->get(['id', 'business_name', 'location'])
+            Salon::orderBy('business_name')->get(['id', 'business_name', 'location', 'logo_url'])
         );
     }
 
