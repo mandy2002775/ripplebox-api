@@ -62,4 +62,46 @@ class SubscriptionTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('salon.subscription.plan_type', 'annual');
     }
+
+    public function test_a_salon_can_cancel_their_subscription(): void
+    {
+        $salon = Salon::factory()->create();
+        Sanctum::actingAs($salon->user);
+
+        $this->postJson('/api/salons/subscription', ['plan_type' => 'monthly'])
+            ->assertCreated();
+
+        $response = $this->deleteJson('/api/salons/subscription');
+
+        $response->assertOk();
+        $response->assertJsonPath('status', 'cancelled');
+        $this->assertDatabaseHas('subscriptions', [
+            'salon_id' => $salon->id,
+            'status' => 'cancelled',
+        ]);
+    }
+
+    public function test_a_salon_without_a_subscription_cannot_cancel_one(): void
+    {
+        $salon = Salon::factory()->create();
+        Sanctum::actingAs($salon->user);
+
+        $response = $this->deleteJson('/api/salons/subscription');
+
+        $response->assertUnprocessable();
+    }
+
+    public function test_a_subscription_cannot_be_cancelled_twice(): void
+    {
+        $salon = Salon::factory()->create();
+        Sanctum::actingAs($salon->user);
+
+        $this->postJson('/api/salons/subscription', ['plan_type' => 'monthly'])
+            ->assertCreated();
+        $this->deleteJson('/api/salons/subscription')->assertOk();
+
+        $response = $this->deleteJson('/api/salons/subscription');
+
+        $response->assertUnprocessable();
+    }
 }

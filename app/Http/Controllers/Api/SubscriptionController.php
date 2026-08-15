@@ -45,4 +45,40 @@ class SubscriptionController extends Controller
 
         return response()->json($subscription, 201);
     }
+
+    /**
+     * A salon cancels their own subscription. Doesn't revoke dashboard
+     * access on the spot — there's no billing period tracking to know
+     * whether they're still inside a paid-for window — it just records
+     * that they've cancelled, same as it would in a real billing system.
+     */
+    public function destroy(Request $request): JsonResponse
+    {
+        $salon = $request->user()->salon;
+
+        // Query fresh rather than the cached `subscription` relation — this
+        // controller and store() are sometimes exercised against the same
+        // resolved user within a single request lifecycle (e.g. tests using
+        // Sanctum::actingAs), where a relation loaded before a write can
+        // return stale data.
+        $subscription = $salon
+            ? $salon->subscriptions()->latest('created_at')->first()
+            : null;
+
+        if (! $subscription) {
+            throw ValidationException::withMessages([
+                'subscription' => 'There is no subscription to cancel.',
+            ]);
+        }
+
+        if ($subscription->status === SubscriptionStatus::Cancelled) {
+            throw ValidationException::withMessages([
+                'subscription' => 'This subscription is already cancelled.',
+            ]);
+        }
+
+        $subscription->update(['status' => SubscriptionStatus::Cancelled]);
+
+        return response()->json($subscription);
+    }
 }

@@ -27,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/salons', [SalonController::class, 'store']);
     Route::get('/salons/dashboard', [SalonDashboardController::class, 'show']);
     Route::post('/salons/subscription', [SubscriptionController::class, 'store']);
+    Route::delete('/salons/subscription', [SubscriptionController::class, 'destroy']);
 
     Route::get('/rewards', [RewardController::class, 'index']);
     Route::post('/rewards', [RewardController::class, 'store']);
