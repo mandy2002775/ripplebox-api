@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('salon_id')->constrained('salons')->cascadeOnDelete();
+            $table->foreignUuid('salon_id')->constrained('salons')->restrictOnDelete();
             $table->string('stripe_subscription_id')->nullable();
             $table->enum('plan_type', ['monthly', 'annual']);
             $table->enum('status', ['trialing', 'active', 'overdue', 'cancelled'])->default('trialing');

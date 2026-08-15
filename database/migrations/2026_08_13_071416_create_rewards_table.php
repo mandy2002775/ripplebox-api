@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('rewards', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('salon_id')->constrained('salons')->cascadeOnDelete();
+            $table->foreignUuid('salon_id')->constrained('salons')->restrictOnDelete();
             $table->enum('reward_type', ['gift_card', 'free_service', 'product', 'vip_perk']);
             $table->decimal('reward_value', 10, 2);
             $table->string('description')->nullable();

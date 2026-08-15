@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('redemptions', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('referral_id')->constrained('referrals')->cascadeOnDelete();
-            $table->foreignUuid('reward_id')->constrained('rewards')->cascadeOnDelete();
+            $table->foreignUuid('referral_id')->constrained('referrals')->restrictOnDelete();
+            $table->foreignUuid('reward_id')->constrained('rewards')->restrictOnDelete();
             $table->timestamp('redeemed_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
