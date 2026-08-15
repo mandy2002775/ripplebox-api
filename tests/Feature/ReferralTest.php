@@ -92,6 +92,102 @@ class ReferralTest extends TestCase
         $response->assertStatus(409);
     }
 
+    public function test_the_owning_salon_can_mark_a_pending_referral_as_engaged(): void
+    {
+        $referrer = Client::factory()->create();
+        $client = Client::factory()->create();
+        $salon = Salon::factory()->create();
+
+        Sanctum::actingAs($client->user);
+        $this->postJson('/api/referrals', [
+            'referral_code' => $referrer->referral_code,
+            'salon_id' => $salon->id,
+        ])->assertCreated();
+
+        $referral = $salon->referrals()->first();
+
+        Sanctum::actingAs($salon->user);
+        $response = $this->patchJson("/api/referrals/{$referral->id}/engage");
+
+        $response->assertOk();
+        $this->assertDatabaseHas('referrals', [
+            'id' => $referral->id,
+            'status' => 'engaged',
+        ]);
+    }
+
+    public function test_an_engaged_referral_can_still_be_completed(): void
+    {
+        $referrer = Client::factory()->create();
+        $client = Client::factory()->create();
+        $salon = Salon::factory()->create();
+        $reward = Reward::factory()->for($salon)->create();
+
+        Sanctum::actingAs($client->user);
+        $this->postJson('/api/referrals', [
+            'referral_code' => $referrer->referral_code,
+            'salon_id' => $salon->id,
+        ])->assertCreated();
+
+        $referral = $salon->referrals()->first();
+
+        Sanctum::actingAs($salon->user);
+        $this->patchJson("/api/referrals/{$referral->id}/engage")->assertOk();
+
+        $response = $this->patchJson("/api/referrals/{$referral->id}/complete", [
+            'reward_id' => $reward->id,
+        ]);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('referrals', [
+            'id' => $referral->id,
+            'status' => 'redeemed',
+        ]);
+    }
+
+    public function test_a_referral_cannot_be_engaged_twice(): void
+    {
+        $referrer = Client::factory()->create();
+        $client = Client::factory()->create();
+        $salon = Salon::factory()->create();
+
+        Sanctum::actingAs($client->user);
+        $this->postJson('/api/referrals', [
+            'referral_code' => $referrer->referral_code,
+            'salon_id' => $salon->id,
+        ])->assertCreated();
+
+        $referral = $salon->referrals()->first();
+
+        Sanctum::actingAs($salon->user);
+        $this->patchJson("/api/referrals/{$referral->id}/engage")->assertOk();
+
+        $response = $this->patchJson("/api/referrals/{$referral->id}/engage");
+
+        $response->assertUnprocessable();
+    }
+
+    public function test_a_different_salon_cannot_engage_someone_elses_referral(): void
+    {
+        $referrer = Client::factory()->create();
+        $client = Client::factory()->create();
+        $salon = Salon::factory()->create();
+        $otherSalon = Salon::factory()->create();
+
+        Sanctum::actingAs($client->user);
+        $this->postJson('/api/referrals', [
+            'referral_code' => $referrer->referral_code,
+            'salon_id' => $salon->id,
+        ])->assertCreated();
+
+        $referral = $salon->referrals()->first();
+
+        Sanctum::actingAs($otherSalon->user);
+        $response = $this->patchJson("/api/referrals/{$referral->id}/engage");
+
+        $response->assertForbidden();
+    }
+
     public function test_the_owning_salon_can_complete_a_pending_referral_and_pay_out_a_reward(): void
     {
         $referrer = Client::factory()->create();

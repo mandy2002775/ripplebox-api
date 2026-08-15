@@ -97,7 +97,7 @@ class OtpAuthController extends Controller
 
         return response()->json([
             'token' => $token,
-            'user' => $user->load(['client', 'salon']),
+            'user' => $user->load(['client', 'salon.subscription']),
         ], $existingUser ? 200 : 201);
     }
 

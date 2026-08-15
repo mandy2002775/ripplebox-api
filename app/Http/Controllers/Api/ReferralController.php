@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\Redemption;
 use App\Models\Referral;
 use App\Models\Reward;
+use App\Models\Salon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -91,11 +92,7 @@ class ReferralController extends Controller
      */
     public function complete(Request $request, Referral $referral): JsonResponse
     {
-        $salon = $request->user()->salon;
-
-        if (! $salon || $referral->salon_id !== $salon->id) {
-            abort(403, 'This referral does not belong to your business.');
-        }
+        $salon = $this->salonOwning($request, $referral);
 
         if ($referral->status === ReferralStatus::Redeemed) {
             throw ValidationException::withMessages([
@@ -136,5 +133,38 @@ class ReferralController extends Controller
         }
 
         return response()->json($redemption->load('reward', 'referral'));
+    }
+
+    /**
+     * The salon marks a pending referral as engaged once they've made
+     * contact with (or booked in) the referred client, ahead of actually
+     * completing the referral. Distinct from complete() — this doesn't pay
+     * out a reward, it's just a lead-pipeline checkpoint between "redeemed
+     * a code" and "showed up and got serviced".
+     */
+    public function engage(Request $request, Referral $referral): JsonResponse
+    {
+        $this->salonOwning($request, $referral);
+
+        if ($referral->status !== ReferralStatus::Pending) {
+            throw ValidationException::withMessages([
+                'referral' => 'Only a pending referral can be marked as engaged.',
+            ]);
+        }
+
+        $referral->update(['status' => ReferralStatus::Engaged]);
+
+        return response()->json($referral);
+    }
+
+    private function salonOwning(Request $request, Referral $referral): Salon
+    {
+        $salon = $request->user()->salon;
+
+        if (! $salon || $referral->salon_id !== $salon->id) {
+            abort(403, 'This referral does not belong to your business.');
+        }
+
+        return $salon;
     }
 }

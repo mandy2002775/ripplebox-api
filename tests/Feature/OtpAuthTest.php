@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\UserType;
 use App\Models\OtpCode;
+use App\Models\Salon;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -84,5 +85,29 @@ class OtpAuthTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('user.id', $user->id);
+    }
+
+    public function test_verifying_an_existing_salon_owner_includes_their_subscription(): void
+    {
+        $salon = Salon::factory()->create();
+        $salon->subscriptions()->create([
+            'plan_type' => 'monthly',
+            'status' => 'trialing',
+            'current_period_end' => now()->addDays(14),
+        ]);
+
+        OtpCode::create([
+            'phone_number' => $salon->user->phone_number,
+            'code' => Hash::make('654321'),
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        $response = $this->postJson('/api/auth/otp/verify', [
+            'phone_number' => $salon->user->phone_number,
+            'code' => '654321',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('user.salon.subscription.plan_type', 'monthly');
     }
 }

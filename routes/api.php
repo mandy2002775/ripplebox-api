@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/rewards/{reward}', [RewardController::class, 'update']);
 
     Route::post('/referrals', [ReferralController::class, 'store']);
+    Route::patch('/referrals/{referral}/engage', [ReferralController::class, 'engage']);
     Route::patch('/referrals/{referral}/complete', [ReferralController::class, 'complete']);
     Route::get('/clients/dashboard', [ClientDashboardController::class, 'show']);
 
