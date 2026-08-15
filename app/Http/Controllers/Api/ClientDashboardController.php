@@ -26,7 +26,12 @@ class ClientDashboardController extends Controller
             ]);
         }
 
-        $referralIds = $client->referralsMade()->pluck('id')
+        $referralsMade = $client->referralsMade()
+            ->with(['referred.user', 'salon'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $referralIds = $referralsMade->pluck('id')
             ->merge($client->referralsReceived()->pluck('id'));
 
         $redemptions = Redemption::whereIn('referral_id', $referralIds)
@@ -34,9 +39,19 @@ class ClientDashboardController extends Controller
             ->get();
 
         return response()->json([
-            'referrals_count' => $client->referralsMade()->count(),
+            'referrals_count' => $referralsMade->count(),
             'rewards_count' => $redemptions->count(),
             'earned' => $redemptions->sum(fn ($r) => (float) $r->reward->reward_value),
+            // Referrals this client sent, regardless of status — lets them see
+            // ones still awaiting the salon to mark complete, not just the
+            // ones that already turned into a redemption below.
+            'referrals' => $referralsMade->map(fn ($r) => [
+                'id' => $r->id,
+                'referred_name' => $r->referred->user->name,
+                'salon_name' => $r->salon->business_name,
+                'status' => $r->status,
+                'created_at' => $r->created_at,
+            ]),
             'redemptions' => $redemptions->map(fn ($r) => [
                 'id' => $r->id,
                 'description' => $r->reward->description,

@@ -35,6 +35,27 @@ class ReferralTest extends TestCase
         ]);
     }
 
+    public function test_a_client_can_see_a_pending_referral_they_sent_on_their_dashboard(): void
+    {
+        $referrer = Client::factory()->create();
+        $client = Client::factory()->create();
+        $salon = Salon::factory()->create();
+
+        Sanctum::actingAs($client->user);
+        $this->postJson('/api/referrals', [
+            'referral_code' => $referrer->referral_code,
+            'salon_id' => $salon->id,
+        ])->assertCreated();
+
+        Sanctum::actingAs($referrer->user);
+        $dashboard = $this->getJson('/api/clients/dashboard')->assertOk();
+
+        $dashboard->assertJsonCount(1, 'referrals');
+        $dashboard->assertJsonPath('referrals.0.referred_name', $client->user->name);
+        $dashboard->assertJsonPath('referrals.0.salon_name', $salon->business_name);
+        $dashboard->assertJsonPath('referrals.0.status', 'pending');
+    }
+
     public function test_a_client_cannot_redeem_their_own_code(): void
     {
         $client = Client::factory()->create();
