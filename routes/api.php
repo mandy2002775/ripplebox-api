@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\ClientDashboardController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReferralController;
+use App\Http\Controllers\Api\ReportsController;
 use App\Http\Controllers\Api\RewardController;
 use App\Http\Controllers\Api\SalonController;
 use App\Http\Controllers\Api\SalonDashboardController;
@@ -42,4 +44,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+
+    Route::middleware('admin')->prefix('admin')->group(function () {
+        Route::get('/stats', [AdminController::class, 'stats']);
+        Route::get('/subscriptions', [AdminController::class, 'subscriptions']);
+        Route::get('/reports', [ReportsController::class, 'show']);
+        Route::get('/reports/export.csv', [ReportsController::class, 'exportCsv']);
+        Route::get('/reports/export.pdf', [ReportsController::class, 'exportPdf']);
+    });
 });
