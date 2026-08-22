@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Reward;
 use App\Models\Salon;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,6 +68,45 @@ class SalonTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonFragment(['id' => $salon->id, 'logo_url' => 'https://example.com/logo.png']);
+    }
+
+    public function test_the_salon_list_includes_the_highest_value_active_reward(): void
+    {
+        $salon = Salon::factory()->create();
+        Reward::factory()->for($salon)->create([
+            'description' => 'Free blowdry',
+            'reward_value' => 30,
+            'is_active' => true,
+        ]);
+        Reward::factory()->for($salon)->create([
+            'description' => '$100 gift card',
+            'reward_value' => 100,
+            'is_active' => true,
+        ]);
+        Reward::factory()->for($salon)->create([
+            'description' => 'Paused reward',
+            'reward_value' => 500,
+            'is_active' => false,
+        ]);
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/salons');
+
+        $response->assertOk();
+        $response->assertJsonFragment(['id' => $salon->id, 'top_reward' => '$100 gift card']);
+    }
+
+    public function test_the_salon_list_shows_no_top_reward_when_none_are_active(): void
+    {
+        $salon = Salon::factory()->create();
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/salons');
+
+        $response->assertOk();
+        $response->assertJsonFragment(['id' => $salon->id, 'top_reward' => null]);
     }
 
     public function test_a_salon_owner_can_edit_their_existing_profile(): void

@@ -12,15 +12,25 @@ use Illuminate\Validation\ValidationException;
 class SalonController extends Controller
 {
     /**
-     * List salons for client-side discovery (screen 7's "Nearby salons").
-     * No geo-distance sort yet — that needs Google Places, which isn't
-     * wired up — so this is ordered by name for now.
+     * List salons for client-side discovery (screen 7's "Nearby salons",
+     * which pairs each salon with a distance and a headline reward — no
+     * geo-distance sort yet, that needs Google Places, which isn't wired
+     * up, but the reward preview is real: each salon's highest-value
+     * active reward, if it has one).
      */
     public function index(): JsonResponse
     {
-        return response()->json(
-            Salon::orderBy('business_name')->get(['id', 'business_name', 'location', 'logo_url'])
-        );
+        $salons = Salon::orderBy('business_name')
+            ->with(['rewards' => fn ($q) => $q->where('is_active', true)->orderByDesc('reward_value')->limit(1)])
+            ->get(['id', 'business_name', 'location', 'logo_url']);
+
+        return response()->json($salons->map(fn (Salon $salon) => [
+            'id' => $salon->id,
+            'business_name' => $salon->business_name,
+            'location' => $salon->location,
+            'logo_url' => $salon->logo_url,
+            'top_reward' => $salon->rewards->first()?->description,
+        ]));
     }
 
     /**
