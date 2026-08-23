@@ -14,6 +14,28 @@ class AccountTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_a_user_can_set_their_email(): void
+    {
+        $client = Client::factory()->create();
+        Sanctum::actingAs($client->user);
+
+        $response = $this->patchJson('/api/me', ['email' => 'me@example.com']);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('users', ['id' => $client->user->id, 'email' => 'me@example.com']);
+    }
+
+    public function test_a_user_cannot_take_an_email_already_in_use(): void
+    {
+        $taken = User::factory()->create(['email' => 'taken@example.com']);
+        $client = Client::factory()->create();
+        Sanctum::actingAs($client->user);
+
+        $response = $this->patchJson('/api/me', ['email' => 'taken@example.com']);
+
+        $response->assertUnprocessable();
+    }
+
     public function test_a_client_can_export_their_own_data(): void
     {
         $client = Client::factory()->create();

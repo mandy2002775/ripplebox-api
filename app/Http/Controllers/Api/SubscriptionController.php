@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Enums\PlanType;
 use App\Enums\SubscriptionStatus;
 use App\Http\Controllers\Controller;
+use App\Mail\WelcomeSalonMail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -42,6 +44,10 @@ class SubscriptionController extends Controller
             'status' => SubscriptionStatus::Trialing,
             'current_period_end' => now()->addDays(30),
         ]);
+
+        if ($salon->user->email) {
+            Mail::to($salon->user->email)->send(new WelcomeSalonMail($salon));
+        }
 
         return response()->json($subscription, 201);
     }

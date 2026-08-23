@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Mail\RewardEarnedMail;
 use App\Models\Client;
 use App\Models\Reward;
 use App\Models\Salon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -217,6 +219,32 @@ class ReferralTest extends TestCase
             'referral_id' => $referral->id,
             'reward_id' => $reward->id,
         ]);
+    }
+
+    public function test_completing_a_referral_emails_recipients_with_an_email_on_file(): void
+    {
+        Mail::fake();
+        $referrer = Client::factory()->create();
+        $client = Client::factory()->create();
+        $referrer->user->update(['email' => 'referrer@example.com']);
+        $salon = Salon::factory()->create();
+        $reward = Reward::factory()->for($salon)->create();
+
+        Sanctum::actingAs($client->user);
+        $this->postJson('/api/referrals', [
+            'referral_code' => $referrer->referral_code,
+            'salon_id' => $salon->id,
+        ])->assertCreated();
+
+        $referral = $salon->referrals()->first();
+
+        Sanctum::actingAs($salon->user);
+        $this->patchJson("/api/referrals/{$referral->id}/complete", [
+            'reward_id' => $reward->id,
+        ])->assertOk();
+
+        Mail::assertSent(RewardEarnedMail::class, fn ($mail) => $mail->hasTo('referrer@example.com'));
+        Mail::assertSent(RewardEarnedMail::class, 1);
     }
 
     public function test_a_salon_cannot_pay_out_an_expired_reward(): void

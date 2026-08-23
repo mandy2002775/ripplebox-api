@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * NFR-04 in-app privacy controls: an authenticated user can see everything
@@ -13,12 +14,29 @@ use Illuminate\Http\Request;
  */
 class AccountController extends Controller
 {
+    /**
+     * Auth is phone-only (FR-01), so email is optional and collected here —
+     * the only thing it's used for is FR-10 transactional emails.
+     */
+    public function update(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+        ]);
+
+        $user->update($data);
+
+        return response()->json($user->load(['client', 'salon.subscription']));
+    }
+
     public function export(Request $request): JsonResponse
     {
         $user = $request->user();
 
         $data = [
-            'account' => $user->only(['id', 'name', 'phone_number', 'user_type', 'created_at']),
+            'account' => $user->only(['id', 'name', 'phone_number', 'email', 'user_type', 'created_at']),
         ];
 
         if ($user->user_type === \App\Enums\UserType::Salon && $user->salon) {

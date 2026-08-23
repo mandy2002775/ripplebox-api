@@ -30,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/auth/logout', [OtpAuthController::class, 'logout']);
+    Route::patch('/me', [AccountController::class, 'update']);
     Route::get('/me/export', [AccountController::class, 'export']);
     Route::delete('/me', [AccountController::class, 'destroy']);
     Route::get('/salons', [SalonController::class, 'index']);

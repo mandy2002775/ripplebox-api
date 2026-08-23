@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\ReferralStatus;
 use App\Http\Controllers\Controller;
+use App\Mail\RewardEarnedMail;
 use App\Models\Client;
 use App\Models\Redemption;
 use App\Models\Referral;
@@ -11,6 +12,7 @@ use App\Models\Reward;
 use App\Models\Salon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -133,6 +135,10 @@ class ReferralController extends Controller
                     'salon_name' => $salon->business_name,
                 ],
             ]);
+
+            if ($recipient->email) {
+                Mail::to($recipient->email)->send(new RewardEarnedMail($recipient, $reward, $salon));
+            }
         }
 
         return response()->json($redemption->load('reward', 'referral'));

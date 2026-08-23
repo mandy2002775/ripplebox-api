@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Mail\WelcomeSalonMail;
 use App\Models\Salon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -34,6 +36,29 @@ class SubscriptionTest extends TestCase
             \Illuminate\Support\Carbon::parse($periodEnd)->timestamp,
             5
         );
+    }
+
+    public function test_starting_a_trial_emails_the_salon_if_they_have_an_email_on_file(): void
+    {
+        Mail::fake();
+        $salon = Salon::factory()->create();
+        $salon->user->update(['email' => 'owner@example.com']);
+        Sanctum::actingAs($salon->user);
+
+        $this->postJson('/api/salons/subscription', ['plan_type' => 'monthly'])->assertCreated();
+
+        Mail::assertSent(WelcomeSalonMail::class, fn ($mail) => $mail->hasTo('owner@example.com'));
+    }
+
+    public function test_starting_a_trial_sends_no_email_without_one_on_file(): void
+    {
+        Mail::fake();
+        $salon = Salon::factory()->create();
+        Sanctum::actingAs($salon->user);
+
+        $this->postJson('/api/salons/subscription', ['plan_type' => 'monthly'])->assertCreated();
+
+        Mail::assertNothingSent();
     }
 
     public function test_a_salon_cannot_start_a_second_subscription(): void
