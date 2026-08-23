@@ -6,6 +6,7 @@ use App\Enums\UserType;
 use App\Models\Client;
 use App\Models\Referral;
 use App\Models\Salon;
+use App\Models\SalonLead;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -60,5 +61,25 @@ class AdminTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonFragment(['salon_name' => 'Gloss Hair Studio', 'plan_type' => 'monthly']);
+    }
+
+    public function test_an_admin_can_view_website_signup_leads(): void
+    {
+        $admin = User::factory()->create(['user_type' => UserType::Admin]);
+        SalonLead::create(['business_name' => 'New Salon Co', 'source' => 'website']);
+
+        Sanctum::actingAs($admin);
+        $response = $this->getJson('/api/admin/leads');
+
+        $response->assertOk();
+        $response->assertJsonFragment(['business_name' => 'New Salon Co']);
+    }
+
+    public function test_a_non_admin_cannot_view_website_signup_leads(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/admin/leads')->assertForbidden();
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Referral;
 use App\Models\Salon;
+use App\Models\SalonLead;
 use App\Models\Subscription;
 use Illuminate\Http\JsonResponse;
 
@@ -35,7 +36,17 @@ class AdminController extends Controller
             'total_referrals_count' => Referral::count(),
             'total_referrals_this_week' => Referral::where('created_at', '>=', $weekAgo)->count(),
             'monthly_revenue' => round($revenue, 2),
+            'pending_leads_count' => SalonLead::count(),
         ]);
+    }
+
+    /**
+     * Salon signups captured via the website's webhook (FR-15), for the
+     * admin team to follow up with — newest first.
+     */
+    public function leads(): JsonResponse
+    {
+        return response()->json(SalonLead::orderByDesc('created_at')->limit(50)->get());
     }
 
     /**

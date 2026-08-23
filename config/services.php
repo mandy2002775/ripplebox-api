@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    // Shared secret the marketing website signs its salon-signup webhook
+    // calls with (FR-15). Not a per-user credential — one shared value
+    // between this API and the website backend.
+    'website_webhook' => [
+        'secret' => env('WEBSITE_WEBHOOK_SECRET'),
+    ],
+
 ];

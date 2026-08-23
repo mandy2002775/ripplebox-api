@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\RewardController;
 use App\Http\Controllers\Api\SalonController;
 use App\Http\Controllers\Api\SalonDashboardController;
 use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Auth\OtpAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,9 @@ Route::prefix('auth/otp')->group(function () {
     Route::post('/verify', [OtpAuthController::class, 'verify'])
         ->middleware('throttle:10,1');
 });
+
+Route::post('/webhooks/salon-signup', [WebhookController::class, 'salonSignup'])
+    ->middleware('throttle:30,1');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', function (\Illuminate\Http\Request $request) {
@@ -51,6 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::get('/stats', [AdminController::class, 'stats']);
         Route::get('/subscriptions', [AdminController::class, 'subscriptions']);
+        Route::get('/leads', [AdminController::class, 'leads']);
         Route::get('/reports', [ReportsController::class, 'show']);
         Route::get('/reports/export.csv', [ReportsController::class, 'exportCsv']);
         Route::get('/reports/export.pdf', [ReportsController::class, 'exportPdf']);
