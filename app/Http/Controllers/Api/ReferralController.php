@@ -104,9 +104,12 @@ class ReferralController extends Controller
             'reward_id' => [
                 'required',
                 'uuid',
+                // DatabaseRule::where($column, $value) is equality-only — an
+                // inequality like expiry_date >= today needs the closure form.
                 Rule::exists('rewards', 'id')
                     ->where('salon_id', $salon->id)
-                    ->where('is_active', true),
+                    ->where('is_active', true)
+                    ->where(fn ($query) => $query->where('expiry_date', '>=', now()->toDateString())),
             ],
         ]);
 

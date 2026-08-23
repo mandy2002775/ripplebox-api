@@ -43,6 +43,7 @@ class SalonDashboardController extends Controller
             ]),
             'active_rewards' => $salon->rewards()
                 ->where('is_active', true)
+                ->where('expiry_date', '>=', now()->toDateString())
                 ->withCount('redemptions')
                 ->get(),
         ]);

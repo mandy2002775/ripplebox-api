@@ -219,6 +219,31 @@ class ReferralTest extends TestCase
         ]);
     }
 
+    public function test_a_salon_cannot_pay_out_an_expired_reward(): void
+    {
+        $referrer = Client::factory()->create();
+        $client = Client::factory()->create();
+        $salon = Salon::factory()->create();
+        // is_active alone doesn't mean redeemable — a reward past its own
+        // expiry_date shouldn't be payable even if nobody paused it.
+        $reward = Reward::factory()->for($salon)->create(['expiry_date' => now()->subDay()]);
+
+        Sanctum::actingAs($client->user);
+        $this->postJson('/api/referrals', [
+            'referral_code' => $referrer->referral_code,
+            'salon_id' => $salon->id,
+        ])->assertCreated();
+
+        $referral = $salon->referrals()->first();
+
+        Sanctum::actingAs($salon->user);
+        $response = $this->patchJson("/api/referrals/{$referral->id}/complete", [
+            'reward_id' => $reward->id,
+        ]);
+
+        $response->assertUnprocessable();
+    }
+
     public function test_a_different_salon_cannot_complete_someone_elses_referral(): void
     {
         $referrer = Client::factory()->create();
