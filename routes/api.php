@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\ClientDashboardController;
 use App\Http\Controllers\Api\NotificationController;
@@ -25,6 +26,8 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/auth/logout', [OtpAuthController::class, 'logout']);
+    Route::get('/me/export', [AccountController::class, 'export']);
+    Route::delete('/me', [AccountController::class, 'destroy']);
     Route::get('/salons', [SalonController::class, 'index']);
     Route::post('/salons', [SalonController::class, 'store']);
     Route::patch('/salons', [SalonController::class, 'update']);
