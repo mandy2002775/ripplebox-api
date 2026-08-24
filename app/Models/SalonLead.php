@@ -11,6 +11,7 @@ class SalonLead extends Model
 
     protected $fillable = [
         'business_name',
+        'owner_name',
         'phone_number',
         'email',
         'location',

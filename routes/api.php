@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\ClientDashboardController;
+use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\ReportsController;
@@ -23,6 +24,11 @@ Route::prefix('auth/otp')->group(function () {
 
 Route::post('/webhooks/salon-signup', [WebhookController::class, 'salonSignup'])
     ->middleware('throttle:30,1');
+
+// Public marketing-site signup form — no shared secret, since a public form
+// can be called by anyone. Only ever captures a lead, never a real account.
+Route::post('/leads', [LeadController::class, 'store'])
+    ->middleware('throttle:10,1');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', function (\Illuminate\Http\Request $request) {
