@@ -12,6 +12,18 @@
             <li>Create your first referral reward</li>
             <li>Share your dashboard with your team</li>
         </ul>
+
+        <a href="{{ config('services.frontend.url') }}" style="display:inline-block;background:#1C0A3A;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:12px 24px;border-radius:10px;margin:16px 0;">
+            Open your dashboard
+        </a>
+
+        <p style="font-size:12px;color:#8878a8;margin-top:16px;">
+            Get the app:
+            <a href="https://apps.apple.com" style="color:#4A1F7C;">App Store</a>
+            &middot;
+            <a href="https://play.google.com" style="color:#4A1F7C;">Google Play</a>
+        </p>
+
         <p style="font-size:12px;color:#8878a8;margin-top:24px;">
             Questions? Just reply to this email.
         </p>

@@ -42,4 +42,11 @@ return [
         'secret' => env('WEBSITE_WEBHOOK_SECRET'),
     ],
 
+    // Where the app itself lives, for real (non-dead) links in
+    // transactional emails (FR-10) — the client's original complaint was
+    // that welcome-email links didn't work at all.
+    'frontend' => [
+        'url' => env('FRONTEND_URL', 'http://localhost:8081'),
+    ],
+
 ];

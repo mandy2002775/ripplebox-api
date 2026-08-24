@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\RegistrationMail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 /**
@@ -21,12 +23,22 @@ class AccountController extends Controller
     public function update(Request $request): JsonResponse
     {
         $user = $request->user();
+        $hadNoEmailBefore = ! $user->email;
 
         $data = $request->validate([
             'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
         ]);
 
         $user->update($data);
+
+        // FR-10's "registration" email has nowhere to fire at actual OTP
+        // registration time — sign-up is phone-only and email is collected
+        // later, opt-in, from profile settings. The honest equivalent here
+        // is: the first time an email becomes attached to an already
+        // OTP-verified account.
+        if ($hadNoEmailBefore && $user->email) {
+            Mail::to($user->email)->send(new RegistrationMail($user));
+        }
 
         return response()->json($user->load(['client', 'salon.subscription']));
     }

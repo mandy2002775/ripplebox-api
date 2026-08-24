@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Mail\RegistrationMail;
 use App\Models\Client;
 use App\Models\Salon;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -23,6 +25,29 @@ class AccountTest extends TestCase
 
         $response->assertOk();
         $this->assertDatabaseHas('users', ['id' => $client->user->id, 'email' => 'me@example.com']);
+    }
+
+    public function test_setting_an_email_for_the_first_time_sends_a_registration_email(): void
+    {
+        Mail::fake();
+        $client = Client::factory()->create();
+        Sanctum::actingAs($client->user);
+
+        $this->patchJson('/api/me', ['email' => 'me@example.com'])->assertOk();
+
+        Mail::assertSent(RegistrationMail::class, fn ($mail) => $mail->hasTo('me@example.com'));
+    }
+
+    public function test_changing_an_already_set_email_does_not_resend_the_registration_email(): void
+    {
+        Mail::fake();
+        $client = Client::factory()->create();
+        $client->user->update(['email' => 'old@example.com']);
+        Sanctum::actingAs($client->user);
+
+        $this->patchJson('/api/me', ['email' => 'new@example.com'])->assertOk();
+
+        Mail::assertNothingSent();
     }
 
     public function test_a_user_cannot_take_an_email_already_in_use(): void
