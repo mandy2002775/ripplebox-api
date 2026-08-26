@@ -7,18 +7,23 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\OtpCode;
 use App\Models\User;
+use App\Services\SmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 
 class OtpAuthController extends Controller
 {
+    public function __construct(private SmsService $sms)
+    {
+    }
+
     /**
-     * Generate and "send" a one-time code to a phone number.
+     * Generate and send a one-time code to a phone number.
      */
     public function request(Request $request): JsonResponse
     {
@@ -40,14 +45,20 @@ class OtpAuthController extends Controller
             'expires_at' => now()->addMinutes(10),
         ]);
 
-        // TODO: dispatch via AWS SNS per the plan once infra exists. Until
-        // then, log it and — local env only — echo it back so the app can be
-        // exercised without real SMS.
-        Log::info("OTP for {$data['phone_number']}: {$code}");
+        try {
+            $this->sms->send($data['phone_number'], "Your Ripplebox code is {$code}. It expires in 10 minutes.");
+        } catch (RuntimeException) {
+            // The OTP row above is already invalidated-then-recreated, so a
+            // failed send here can't be silently reported as success — the
+            // user would be stuck with a code that never arrived.
+            throw ValidationException::withMessages([
+                'phone_number' => "Couldn't send a code to that number right now. Please try again shortly.",
+            ]);
+        }
 
         return response()->json([
             'message' => 'Code sent.',
-            'debug_code' => app()->environment('local') ? $code : null,
+            'debug_code' => (app()->environment('local') && ! $this->sms->isConfigured()) ? $code : null,
         ]);
     }
 

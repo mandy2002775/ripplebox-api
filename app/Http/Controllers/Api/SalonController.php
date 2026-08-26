@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\UserType;
 use App\Http\Controllers\Controller;
 use App\Models\Salon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -63,10 +64,24 @@ class SalonController extends Controller
             'logo_url' => ['nullable', 'string', 'max:2048'],
         ]);
 
-        $salon = Salon::create([
-            ...$data,
-            'user_id' => $user->id,
-        ]);
+        // The $user->salon check above isn't atomic with this create() — two
+        // concurrent submits could both pass it. The DB-level unique
+        // constraint on salons.user_id is the real guarantee; this turns the
+        // race loser's failure into the same clean 409 instead of a raw 500.
+        try {
+            $salon = Salon::create([
+                ...$data,
+                'user_id' => $user->id,
+            ]);
+        } catch (QueryException $e) {
+            if ($e->getCode() === '23000') {
+                return response()->json([
+                    'message' => 'A business profile already exists for this account.',
+                ], 409);
+            }
+
+            throw $e;
+        }
 
         return response()->json($salon, 201);
     }

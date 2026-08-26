@@ -10,8 +10,10 @@ use App\Models\Redemption;
 use App\Models\Referral;
 use App\Models\Reward;
 use App\Models\Salon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -65,12 +67,27 @@ class ReferralController extends Controller
             ], 409);
         }
 
-        $referral = Referral::create([
-            'referrer_client_id' => $referrer->id,
-            'referred_client_id' => $client->id,
-            'salon_id' => $data['salon_id'],
-            'status' => 'pending',
-        ]);
+        // The exists() check above and this create() aren't atomic — two
+        // identical requests can both pass the check before either writes.
+        // The DB-level unique constraint (referrals_unique_triple) is the
+        // real guarantee; this catch turns the race loser's failure into
+        // the same clean 409 instead of a raw 500.
+        try {
+            $referral = Referral::create([
+                'referrer_client_id' => $referrer->id,
+                'referred_client_id' => $client->id,
+                'salon_id' => $data['salon_id'],
+                'status' => 'pending',
+            ]);
+        } catch (QueryException $e) {
+            if ($this->isUniqueConstraintViolation($e)) {
+                return response()->json([
+                    'message' => 'You\'ve already redeemed this code at this salon.',
+                ], 409);
+            }
+
+            throw $e;
+        }
 
         $referral->load('salon.user');
         $referral->salon->user->notifications()->create([
@@ -115,13 +132,30 @@ class ReferralController extends Controller
             ],
         ]);
 
-        $redemption = Redemption::create([
-            'referral_id' => $referral->id,
-            'reward_id' => $data['reward_id'],
-            'redeemed_at' => now(),
-        ]);
+        // Two concurrent "complete" requests for the same referral would
+        // otherwise both pass the status check above before either writes,
+        // paying the reward out twice. Locking the row inside a transaction
+        // serializes them — the second request re-checks status after
+        // acquiring the lock and is rejected cleanly instead of double-paying.
+        $redemption = DB::transaction(function () use ($referral, $data) {
+            $locked = Referral::whereKey($referral->id)->lockForUpdate()->firstOrFail();
 
-        $referral->update(['status' => ReferralStatus::Redeemed]);
+            if ($locked->status === ReferralStatus::Redeemed) {
+                throw ValidationException::withMessages([
+                    'referral' => 'This referral has already been completed.',
+                ]);
+            }
+
+            $redemption = Redemption::create([
+                'referral_id' => $locked->id,
+                'reward_id' => $data['reward_id'],
+                'redeemed_at' => now(),
+            ]);
+
+            $locked->update(['status' => ReferralStatus::Redeemed]);
+
+            return $redemption;
+        });
 
         $reward = Reward::findOrFail($data['reward_id']);
         $referral->load('referrer.user', 'referred.user');
@@ -142,6 +176,13 @@ class ReferralController extends Controller
         }
 
         return response()->json($redemption->load('reward', 'referral'));
+    }
+
+    private function isUniqueConstraintViolation(QueryException $e): bool
+    {
+        // SQLSTATE 23000 covers integrity constraint violations across both
+        // MySQL (production) and SQLite (dev/test).
+        return $e->getCode() === '23000';
     }
 
     /**

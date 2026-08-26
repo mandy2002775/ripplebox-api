@@ -6,8 +6,10 @@ use App\Enums\PlanType;
 use App\Enums\SubscriptionStatus;
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeSalonMail;
+use App\Models\Salon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -39,11 +41,32 @@ class SubscriptionController extends Controller
             'plan_type' => ['required', Rule::enum(PlanType::class)],
         ]);
 
-        $subscription = $salon->subscriptions()->create([
-            'plan_type' => $data['plan_type'],
-            'status' => SubscriptionStatus::Trialing,
-            'current_period_end' => now()->addDays(30),
-        ]);
+        // Subscriptions can legitimately have more than one row per salon
+        // over time (cancel, then re-subscribe later), so this can't be a
+        // DB unique constraint the way salons/redemptions/referrals are —
+        // instead, locking the salon row itself serializes two concurrent
+        // "start a subscription" submits so the second sees the first's
+        // row and is rejected cleanly rather than creating a duplicate
+        // trial.
+        $subscription = DB::transaction(function () use ($salon, $data) {
+            $locked = Salon::whereKey($salon->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->subscriptions()->exists()) {
+                return null;
+            }
+
+            return $locked->subscriptions()->create([
+                'plan_type' => $data['plan_type'],
+                'status' => SubscriptionStatus::Trialing,
+                'current_period_end' => now()->addDays(30),
+            ]);
+        });
+
+        if (! $subscription) {
+            return response()->json([
+                'message' => 'A subscription already exists for this business.',
+            ], 409);
+        }
 
         if ($salon->user->email) {
             Mail::to($salon->user->email)->send(new WelcomeSalonMail($salon));
