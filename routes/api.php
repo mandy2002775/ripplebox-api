@@ -3,11 +3,13 @@
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\ClientDashboardController;
+use App\Http\Controllers\Api\ContentController;
 use App\Http\Controllers\Api\LeadController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\ReportsController;
 use App\Http\Controllers\Api\RewardController;
+use App\Http\Controllers\Api\SalonClientController;
 use App\Http\Controllers\Api\SalonController;
 use App\Http\Controllers\Api\SalonDashboardController;
 use App\Http\Controllers\Api\SubscriptionController;
@@ -43,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/salons', [SalonController::class, 'store']);
     Route::patch('/salons', [SalonController::class, 'update']);
     Route::get('/salons/dashboard', [SalonDashboardController::class, 'show']);
+    Route::get('/salons/clients', [SalonClientController::class, 'index']);
     Route::post('/salons/subscription', [SubscriptionController::class, 'store']);
     Route::delete('/salons/subscription', [SubscriptionController::class, 'destroy']);
 
@@ -54,6 +57,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/referrals/{referral}/engage', [ReferralController::class, 'engage']);
     Route::patch('/referrals/{referral}/complete', [ReferralController::class, 'complete']);
     Route::get('/clients/dashboard', [ClientDashboardController::class, 'show']);
+
+    Route::get('/content', [ContentController::class, 'index']);
+    Route::post('/content', [ContentController::class, 'store']);
+    Route::delete('/content/{post}', [ContentController::class, 'destroy']);
+    Route::get('/content/{post}/image', [ContentController::class, 'showImage'])->name('content.image');
+    Route::post('/content/{post}/like', [ContentController::class, 'toggleLike']);
+    Route::get('/salons/{salon}/content', [ContentController::class, 'forSalon']);
 
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markRead']);

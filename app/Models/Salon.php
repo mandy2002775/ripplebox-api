@@ -48,6 +48,11 @@ class Salon extends Model
         return $this->hasMany(Referral::class);
     }
 
+    public function contentPosts(): HasMany
+    {
+        return $this->hasMany(ContentPost::class);
+    }
+
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
