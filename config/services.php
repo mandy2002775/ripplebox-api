@@ -41,10 +41,21 @@ return [
     // always gets a fixed, known code instead of a random SMS-delivered
     // one. Scoped to exactly one number, provided directly to the
     // reviewer via the store listing's demo-account fields, never
-    // advertised anywhere in the app itself.
+    // advertised anywhere in the app itself. Do not repurpose this number
+    // for anything else — it's the exact value already submitted in the
+    // App Store Connect / Play Console Test Information forms.
     'app_review' => [
         'phone_number' => env('APP_REVIEW_PHONE_NUMBER'),
         'code' => env('APP_REVIEW_OTP_CODE'),
+    ],
+
+    // A second, separate bypass number for the team's own demo/testing use
+    // (e.g. trying the salon-owner flow without a real SMS provider) — kept
+    // apart from app_review above so it can be freely reused or rotated
+    // without ever touching what's already been given to a store reviewer.
+    'demo_salon' => [
+        'phone_number' => env('DEMO_SALON_PHONE_NUMBER'),
+        'code' => env('DEMO_SALON_OTP_CODE'),
     ],
 
     'slack' => [

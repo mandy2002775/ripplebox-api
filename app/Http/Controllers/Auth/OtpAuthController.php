@@ -37,12 +37,9 @@ class OtpAuthController extends Controller
             ->whereNull('consumed_at')
             ->delete();
 
-        $isAppReviewNumber = filled(config('services.app_review.phone_number'))
-            && $data['phone_number'] === config('services.app_review.phone_number');
+        $bypassCode = $this->bypassCodeFor($data['phone_number']);
 
-        $code = $isAppReviewNumber
-            ? config('services.app_review.code')
-            : (string) random_int(100000, 999999);
+        $code = $bypassCode ?? (string) random_int(100000, 999999);
 
         OtpCode::create([
             'phone_number' => $data['phone_number'],
@@ -50,10 +47,10 @@ class OtpAuthController extends Controller
             'expires_at' => now()->addMinutes(10),
         ]);
 
-        // App/Play Store reviewers can't receive a real text, so the one
-        // designated review number never goes through SMS at all — its
-        // code is fixed and handed to the reviewer directly instead.
-        if (! $isAppReviewNumber) {
+        // Designated demo/reviewer numbers can't receive a real text, so
+        // they never go through SMS at all — their code is fixed and known
+        // ahead of time instead.
+        if (! $bypassCode) {
             try {
                 $this->sms->send($data['phone_number'], "Your Ripplebox code is {$code}. It expires in 10 minutes.");
             } catch (RuntimeException) {
@@ -130,6 +127,22 @@ class OtpAuthController extends Controller
         $request->user()->currentAccessToken()->delete();
 
         return response()->json(['message' => 'Signed out.']);
+    }
+
+    /**
+     * Fixed OTP code for a designated demo/reviewer number, or null for a
+     * normal number that should get a real random code.
+     */
+    private function bypassCodeFor(string $phoneNumber): ?string
+    {
+        foreach (['app_review', 'demo_salon'] as $key) {
+            $number = config("services.{$key}.phone_number");
+            if (filled($number) && $phoneNumber === $number) {
+                return config("services.{$key}.code");
+            }
+        }
+
+        return null;
     }
 
     private function generateReferralCode(string $name): string

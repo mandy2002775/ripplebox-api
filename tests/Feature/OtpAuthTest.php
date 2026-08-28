@@ -154,4 +154,40 @@ class OtpAuthTest extends TestCase
             )
         );
     }
+
+    public function test_the_demo_salon_number_also_gets_a_fixed_code_and_can_verify(): void
+    {
+        config(['services.demo_salon.phone_number' => '+61400000299', 'services.demo_salon.code' => '924817']);
+
+        $this->postJson('/api/auth/otp/request', ['phone_number' => '+61400000299'])->assertOk();
+
+        $response = $this->postJson('/api/auth/otp/verify', [
+            'phone_number' => '+61400000299',
+            'code' => '924817',
+            'name' => 'Demo Salon',
+            'user_type' => 'salon',
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('user.user_type', 'salon');
+    }
+
+    public function test_the_app_review_and_demo_salon_bypasses_are_independent(): void
+    {
+        config([
+            'services.app_review.phone_number' => '+61400000199',
+            'services.app_review.code' => '681146',
+            'services.demo_salon.phone_number' => '+61400000299',
+            'services.demo_salon.code' => '924817',
+        ]);
+
+        $this->postJson('/api/auth/otp/request', ['phone_number' => '+61400000299'])->assertOk();
+
+        $this->assertFalse(
+            \Illuminate\Support\Facades\Hash::check(
+                '681146',
+                \App\Models\OtpCode::where('phone_number', '+61400000299')->latest('id')->first()->code
+            )
+        );
+    }
 }
