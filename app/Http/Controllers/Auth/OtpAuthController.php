@@ -37,7 +37,12 @@ class OtpAuthController extends Controller
             ->whereNull('consumed_at')
             ->delete();
 
-        $code = (string) random_int(100000, 999999);
+        $isAppReviewNumber = filled(config('services.app_review.phone_number'))
+            && $data['phone_number'] === config('services.app_review.phone_number');
+
+        $code = $isAppReviewNumber
+            ? config('services.app_review.code')
+            : (string) random_int(100000, 999999);
 
         OtpCode::create([
             'phone_number' => $data['phone_number'],
@@ -45,15 +50,20 @@ class OtpAuthController extends Controller
             'expires_at' => now()->addMinutes(10),
         ]);
 
-        try {
-            $this->sms->send($data['phone_number'], "Your Ripplebox code is {$code}. It expires in 10 minutes.");
-        } catch (RuntimeException) {
-            // The OTP row above is already invalidated-then-recreated, so a
-            // failed send here can't be silently reported as success — the
-            // user would be stuck with a code that never arrived.
-            throw ValidationException::withMessages([
-                'phone_number' => "Couldn't send a code to that number right now. Please try again shortly.",
-            ]);
+        // App/Play Store reviewers can't receive a real text, so the one
+        // designated review number never goes through SMS at all — its
+        // code is fixed and handed to the reviewer directly instead.
+        if (! $isAppReviewNumber) {
+            try {
+                $this->sms->send($data['phone_number'], "Your Ripplebox code is {$code}. It expires in 10 minutes.");
+            } catch (RuntimeException) {
+                // The OTP row above is already invalidated-then-recreated, so a
+                // failed send here can't be silently reported as success — the
+                // user would be stuck with a code that never arrived.
+                throw ValidationException::withMessages([
+                    'phone_number' => "Couldn't send a code to that number right now. Please try again shortly.",
+                ]);
+            }
         }
 
         return response()->json([

@@ -110,4 +110,48 @@ class OtpAuthTest extends TestCase
         $response->assertOk();
         $response->assertJsonPath('user.salon.subscription.plan_type', 'monthly');
     }
+
+    public function test_the_app_review_number_always_gets_the_fixed_configured_code(): void
+    {
+        config(['services.app_review.phone_number' => '+61400000199', 'services.app_review.code' => '681146']);
+
+        $this->postJson('/api/auth/otp/request', ['phone_number' => '+61400000199'])->assertOk();
+
+        $this->assertTrue(
+            \Illuminate\Support\Facades\Hash::check(
+                '681146',
+                \App\Models\OtpCode::where('phone_number', '+61400000199')->latest('id')->first()->code
+            )
+        );
+    }
+
+    public function test_the_app_review_number_can_verify_with_the_fixed_code(): void
+    {
+        config(['services.app_review.phone_number' => '+61400000199', 'services.app_review.code' => '681146']);
+
+        $this->postJson('/api/auth/otp/request', ['phone_number' => '+61400000199'])->assertOk();
+
+        $response = $this->postJson('/api/auth/otp/verify', [
+            'phone_number' => '+61400000199',
+            'code' => '681146',
+            'name' => 'App Reviewer',
+            'user_type' => 'client',
+        ]);
+
+        $response->assertCreated();
+    }
+
+    public function test_a_normal_number_is_unaffected_by_the_app_review_config(): void
+    {
+        config(['services.app_review.phone_number' => '+61400000199', 'services.app_review.code' => '681146']);
+
+        $this->postJson('/api/auth/otp/request', ['phone_number' => '+61411111222'])->assertOk();
+
+        $this->assertFalse(
+            \Illuminate\Support\Facades\Hash::check(
+                '681146',
+                \App\Models\OtpCode::where('phone_number', '+61411111222')->latest('id')->first()->code
+            )
+        );
+    }
 }

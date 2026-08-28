@@ -36,6 +36,17 @@ return [
         'from' => env('TWILIO_FROM_NUMBER'),
     ],
 
+    // Apple/Google reviewers can't receive a real SMS, so sign-in is
+    // otherwise impossible for them to test — this single phone number
+    // always gets a fixed, known code instead of a random SMS-delivered
+    // one. Scoped to exactly one number, provided directly to the
+    // reviewer via the store listing's demo-account fields, never
+    // advertised anywhere in the app itself.
+    'app_review' => [
+        'phone_number' => env('APP_REVIEW_PHONE_NUMBER'),
+        'code' => env('APP_REVIEW_OTP_CODE'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
