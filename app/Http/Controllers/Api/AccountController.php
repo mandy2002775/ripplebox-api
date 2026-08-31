@@ -92,6 +92,14 @@ class AccountController extends Controller
         $user->tokens()->delete();
         $user->salon?->delete();
         $user->client?->delete();
+
+        // phone_number has a hard DB-level unique constraint that a soft
+        // delete doesn't relax — without this, the same number could never
+        // sign up again (User::create() would hit the constraint and 500,
+        // since the OTP lookup's SoftDeletes scope already can't see this
+        // row to reuse it). Tombstoning it here is what actually makes
+        // "deleted" mean deleted, rather than "permanently reserved."
+        $user->update(['phone_number' => "{$user->phone_number}#deleted#{$user->id}"]);
         $user->delete();
 
         return response()->json(['message' => 'Your account and its data have been deleted.']);

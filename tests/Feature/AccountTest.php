@@ -107,4 +107,28 @@ class AccountTest extends TestCase
 
         $this->assertEquals(0, PersonalAccessToken::where('tokenable_id', $user->id)->count());
     }
+
+    public function test_the_same_phone_number_can_sign_up_fresh_after_the_account_is_deleted(): void
+    {
+        $user = User::factory()->create(['phone_number' => '+61411111222']);
+        Sanctum::actingAs($user);
+        $this->deleteJson('/api/me')->assertOk();
+
+        $code = \App\Models\OtpCode::create([
+            'phone_number' => '+61411111222',
+            'code' => \Illuminate\Support\Facades\Hash::make('123456'),
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        $response = $this->postJson('/api/auth/otp/verify', [
+            'phone_number' => '+61411111222',
+            'code' => '123456',
+            'name' => 'New Owner',
+            'user_type' => 'client',
+        ]);
+
+        $response->assertCreated();
+        $this->assertNotEquals($user->id, $response->json('user.id'));
+        $this->assertDatabaseHas('users', ['id' => $response->json('user.id'), 'phone_number' => '+61411111222']);
+    }
 }
