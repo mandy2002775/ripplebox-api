@@ -42,6 +42,17 @@ class ReferralController extends Controller
             'salon_id' => ['required', 'uuid', 'exists:salons,id'],
         ]);
 
+        $salon = Salon::find($data['salon_id']);
+
+        // Imported salon listings (see ImportSalonsFromOsm) have no owner
+        // until a real business claims them — nobody to notify, and no
+        // reward has been configured yet, so redemption isn't possible there.
+        if (! $salon->user_id) {
+            throw ValidationException::withMessages([
+                'salon_id' => 'This salon hasn\'t joined Ripplebox yet.',
+            ]);
+        }
+
         $referrer = Client::where('referral_code', $data['referral_code'])->first();
 
         if (! $referrer) {

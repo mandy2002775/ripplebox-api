@@ -36,6 +36,7 @@ class SalonFavoriteController extends Controller
             'logo_url' => $salon->logo_url,
             'top_reward' => $salon->rewards->first()?->description,
             'is_favorited' => true,
+            'is_claimed' => $salon->user_id !== null,
         ])->values());
     }
 

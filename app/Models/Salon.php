@@ -22,6 +22,8 @@ class Salon extends Model
         'category',
         'location',
         'google_place_id',
+        'external_ref',
+        'source',
         'website',
         'instagram_handle',
         'logo_url',

@@ -31,7 +31,7 @@ class SalonController extends Controller
             ->when($data['category'] ?? null, fn ($q, $category) => $q->where('category', $category))
             ->orderBy('business_name')
             ->with(['rewards' => fn ($q) => $q->where('is_active', true)->orderByDesc('reward_value')->limit(1)])
-            ->get(['id', 'business_name', 'category', 'location', 'logo_url']);
+            ->get(['id', 'user_id', 'business_name', 'category', 'location', 'logo_url']);
 
         $favoritedIds = $request->user()->client
             ?->favoriteSalons()->pluck('salon_id')->all() ?? [];
@@ -44,6 +44,7 @@ class SalonController extends Controller
             'logo_url' => $salon->logo_url,
             'top_reward' => $salon->rewards->first()?->description,
             'is_favorited' => in_array($salon->id, $favoritedIds, true),
+            'is_claimed' => $salon->user_id !== null,
         ]));
     }
 

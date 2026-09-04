@@ -37,6 +37,24 @@ class ReferralTest extends TestCase
         ]);
     }
 
+    public function test_a_client_cannot_redeem_a_code_at_an_unclaimed_salon(): void
+    {
+        $referrer = Client::factory()->create();
+        $client = Client::factory()->create();
+        $salon = Salon::factory()->create(['user_id' => null, 'source' => 'osm_import']);
+
+        Sanctum::actingAs($client->user);
+
+        $response = $this->postJson('/api/referrals', [
+            'referral_code' => $referrer->referral_code,
+            'salon_id' => $salon->id,
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors('salon_id');
+        $this->assertDatabaseMissing('referrals', ['salon_id' => $salon->id]);
+    }
+
     public function test_a_client_can_see_a_pending_referral_they_sent_on_their_dashboard(): void
     {
         $referrer = Client::factory()->create();

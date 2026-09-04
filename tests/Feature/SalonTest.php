@@ -70,6 +70,20 @@ class SalonTest extends TestCase
         $response->assertJsonFragment(['id' => $salon->id, 'logo_url' => 'https://example.com/logo.png']);
     }
 
+    public function test_the_salon_list_flags_an_imported_salon_as_unclaimed(): void
+    {
+        $owned = Salon::factory()->create();
+        $imported = Salon::factory()->create(['user_id' => null, 'source' => 'osm_import']);
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/salons');
+
+        $response->assertOk();
+        $response->assertJsonFragment(['id' => $owned->id, 'is_claimed' => true]);
+        $response->assertJsonFragment(['id' => $imported->id, 'is_claimed' => false]);
+    }
+
     public function test_the_salon_list_includes_the_highest_value_active_reward(): void
     {
         $salon = Salon::factory()->create();
