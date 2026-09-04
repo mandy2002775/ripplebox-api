@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\ReportsController;
 use App\Http\Controllers\Api\RewardController;
 use App\Http\Controllers\Api\SalonClientController;
+use App\Http\Controllers\Api\SalonFavoriteController;
 use App\Http\Controllers\Api\SalonController;
 use App\Http\Controllers\Api\SalonDashboardController;
 use App\Http\Controllers\Api\SubscriptionController;
@@ -46,6 +47,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/salons', [SalonController::class, 'update']);
     Route::get('/salons/dashboard', [SalonDashboardController::class, 'show']);
     Route::get('/salons/clients', [SalonClientController::class, 'index']);
+    Route::get('/salons/favorites', [SalonFavoriteController::class, 'index']);
+    Route::post('/salons/{salon}/favorite', [SalonFavoriteController::class, 'toggle']);
     Route::post('/salons/subscription', [SubscriptionController::class, 'store']);
     Route::delete('/salons/subscription', [SubscriptionController::class, 'destroy']);
 

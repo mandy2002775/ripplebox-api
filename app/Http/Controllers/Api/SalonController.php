@@ -33,6 +33,9 @@ class SalonController extends Controller
             ->with(['rewards' => fn ($q) => $q->where('is_active', true)->orderByDesc('reward_value')->limit(1)])
             ->get(['id', 'business_name', 'category', 'location', 'logo_url']);
 
+        $favoritedIds = $request->user()->client
+            ?->favoriteSalons()->pluck('salon_id')->all() ?? [];
+
         return response()->json($salons->map(fn (Salon $salon) => [
             'id' => $salon->id,
             'business_name' => $salon->business_name,
@@ -40,6 +43,7 @@ class SalonController extends Controller
             'location' => $salon->location,
             'logo_url' => $salon->logo_url,
             'top_reward' => $salon->rewards->first()?->description,
+            'is_favorited' => in_array($salon->id, $favoritedIds, true),
         ]));
     }
 

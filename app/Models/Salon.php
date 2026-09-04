@@ -56,6 +56,11 @@ class Salon extends Model
         return $this->hasMany(ContentPost::class);
     }
 
+    public function favoritedBy(): HasMany
+    {
+        return $this->hasMany(SalonFavorite::class);
+    }
+
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);

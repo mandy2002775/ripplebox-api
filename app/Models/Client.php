@@ -32,4 +32,9 @@ class Client extends Model
     {
         return $this->hasMany(Referral::class, 'referred_client_id');
     }
+
+    public function favoriteSalons(): HasMany
+    {
+        return $this->hasMany(SalonFavorite::class);
+    }
 }
