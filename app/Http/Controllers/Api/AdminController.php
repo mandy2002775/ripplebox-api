@@ -10,6 +10,7 @@ use App\Models\Salon;
 use App\Models\SalonLead;
 use App\Models\Subscription;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 
 class AdminController extends Controller
 {
@@ -52,6 +53,18 @@ class AdminController extends Controller
     public function leads(): JsonResponse
     {
         return response()->json(SalonLead::orderByDesc('created_at')->limit(50)->get());
+    }
+
+    /**
+     * Removes a lead — e.g. test/junk submissions, or one already followed
+     * up with outside the app. Hard delete: leads have no soft-delete
+     * column, and there's no downstream data that references a lead.
+     */
+    public function deleteLead(SalonLead $lead): Response
+    {
+        $lead->delete();
+
+        return response()->noContent();
     }
 
     /**

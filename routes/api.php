@@ -82,6 +82,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/stats', [AdminController::class, 'stats']);
         Route::get('/subscriptions', [AdminController::class, 'subscriptions']);
         Route::get('/leads', [AdminController::class, 'leads']);
+        Route::delete('/leads/{lead}', [AdminController::class, 'deleteLead']);
         Route::get('/reports', [ReportsController::class, 'show']);
         Route::get('/reports/export.csv', [ReportsController::class, 'exportCsv']);
         Route::get('/reports/export.pdf', [ReportsController::class, 'exportPdf']);

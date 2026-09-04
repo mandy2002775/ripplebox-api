@@ -96,4 +96,26 @@ class AdminTest extends TestCase
 
         $this->getJson('/api/admin/leads')->assertForbidden();
     }
+
+    public function test_an_admin_can_delete_a_lead(): void
+    {
+        $admin = User::factory()->create(['user_type' => UserType::Admin]);
+        $lead = SalonLead::create(['business_name' => 'Test Junk Inc', 'source' => 'website']);
+
+        Sanctum::actingAs($admin);
+        $response = $this->deleteJson("/api/admin/leads/{$lead->id}");
+
+        $response->assertNoContent();
+        $this->assertDatabaseMissing('salon_leads', ['id' => $lead->id]);
+    }
+
+    public function test_a_non_admin_cannot_delete_a_lead(): void
+    {
+        $user = User::factory()->create();
+        $lead = SalonLead::create(['business_name' => 'Test Junk Inc', 'source' => 'website']);
+
+        Sanctum::actingAs($user);
+        $this->deleteJson("/api/admin/leads/{$lead->id}")->assertForbidden();
+        $this->assertDatabaseHas('salon_leads', ['id' => $lead->id]);
+    }
 }
