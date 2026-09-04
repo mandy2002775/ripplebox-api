@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use App\Enums\UserType;
+use App\Mail\RegistrationMail;
 use App\Models\OtpCode;
 use App\Models\Salon;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class OtpAuthTest extends TestCase
@@ -39,6 +41,7 @@ class OtpAuthTest extends TestCase
             'code' => '123456',
             'name' => 'Jane Doe',
             'user_type' => 'client',
+            'email' => 'jane@example.com',
         ]);
 
         $response->assertCreated();
@@ -48,6 +51,68 @@ class OtpAuthTest extends TestCase
         $user = User::where('phone_number', '+61411111222')->first();
         $this->assertNotNull($user->client);
         $this->assertNotNull($user->client->referral_code);
+    }
+
+    public function test_a_new_client_signup_requires_an_email(): void
+    {
+        OtpCode::create([
+            'phone_number' => '+61411111222',
+            'code' => Hash::make('123456'),
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        $response = $this->postJson('/api/auth/otp/verify', [
+            'phone_number' => '+61411111222',
+            'code' => '123456',
+            'name' => 'Jane Doe',
+            'user_type' => 'client',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['email']);
+    }
+
+    public function test_registering_with_an_email_sends_a_welcome_email_immediately(): void
+    {
+        Mail::fake();
+
+        OtpCode::create([
+            'phone_number' => '+61411111222',
+            'code' => Hash::make('123456'),
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        $this->postJson('/api/auth/otp/verify', [
+            'phone_number' => '+61411111222',
+            'code' => '123456',
+            'name' => 'Jane Doe',
+            'user_type' => 'client',
+            'email' => 'jane@example.com',
+        ])->assertCreated();
+
+        Mail::assertSent(RegistrationMail::class, fn ($mail) => $mail->hasTo('jane@example.com'));
+    }
+
+    public function test_a_taken_email_cannot_be_reused_at_signup(): void
+    {
+        User::factory()->create(['email' => 'taken@example.com']);
+
+        OtpCode::create([
+            'phone_number' => '+61411111222',
+            'code' => Hash::make('123456'),
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        $response = $this->postJson('/api/auth/otp/verify', [
+            'phone_number' => '+61411111222',
+            'code' => '123456',
+            'name' => 'Jane Doe',
+            'user_type' => 'client',
+            'email' => 'taken@example.com',
+        ]);
+
+        $response->assertUnprocessable();
+        $response->assertJsonValidationErrors(['email']);
     }
 
     public function test_verifying_an_expired_code_is_rejected(): void

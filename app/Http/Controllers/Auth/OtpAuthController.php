@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Enums\UserType;
 use App\Http\Controllers\Controller;
+use App\Mail\RegistrationMail;
 use App\Models\Client;
 use App\Models\OtpCode;
 use App\Models\User;
@@ -11,6 +12,7 @@ use App\Services\SmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -77,11 +79,29 @@ class OtpAuthController extends Controller
     {
         $existingUser = User::where('phone_number', $request->input('phone_number'))->first();
 
+        // App/Play Store reviewers sign in with a bypass number and were
+        // never asked for an email in the store listing's Test Information —
+        // exempting it here so review doesn't get stuck on a field nobody
+        // told them about, while real client sign-ups still require one.
+        $isBypassNumber = (bool) $this->bypassCodeFor((string) $request->input('phone_number'));
+
         $data = $request->validate([
             'phone_number' => ['required', 'string'],
             'code' => ['required', 'string', 'size:6'],
             'name' => [Rule::requiredIf(! $existingUser), 'string', 'max:255'],
             'user_type' => [Rule::requiredIf(! $existingUser), Rule::enum(UserType::class)],
+            // Client-requested fix: clients were never actually receiving a
+            // welcome email, because email was an entirely optional,
+            // easy-to-skip profile setting nobody filled in. Collecting it
+            // at sign-up (like the prior build did) is what actually gets
+            // it sent.
+            'email' => [
+                Rule::requiredIf(! $existingUser && ! $isBypassNumber),
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email'),
+            ],
         ]);
 
         $otp = OtpCode::where('phone_number', $data['phone_number'])
@@ -102,6 +122,7 @@ class OtpAuthController extends Controller
             'phone_number' => $data['phone_number'],
             'name' => $data['name'],
             'user_type' => $data['user_type'],
+            'email' => $data['email'] ?? null,
         ]);
 
         if (! $existingUser && $user->user_type === UserType::Client) {
@@ -109,6 +130,10 @@ class OtpAuthController extends Controller
                 'user_id' => $user->id,
                 'referral_code' => $this->generateReferralCode($user->name),
             ]);
+        }
+
+        if (! $existingUser && $user->email) {
+            Mail::to($user->email)->send(new RegistrationMail($user));
         }
 
         $token = $user->createToken('mobile')->plainTextToken;

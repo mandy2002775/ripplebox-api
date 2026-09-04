@@ -125,6 +125,7 @@ class AccountTest extends TestCase
             'code' => '123456',
             'name' => 'New Owner',
             'user_type' => 'client',
+            'email' => 'newowner@example.com',
         ]);
 
         $response->assertCreated();
