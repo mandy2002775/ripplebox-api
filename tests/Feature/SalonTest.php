@@ -138,4 +138,58 @@ class SalonTest extends TestCase
 
         $response->assertUnprocessable();
     }
+
+    public function test_a_salon_can_set_its_category_on_creation(): void
+    {
+        $user = User::factory()->salon()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/salons', [
+            'business_name' => 'Gloss Hair Studio',
+            'category' => 'hair',
+            'location' => '42 King St, Perth WA',
+        ]);
+
+        $response->assertCreated();
+        $this->assertDatabaseHas('salons', ['user_id' => $user->id, 'category' => 'hair']);
+    }
+
+    public function test_an_invalid_category_is_rejected(): void
+    {
+        $user = User::factory()->salon()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/salons', [
+            'business_name' => 'Gloss Hair Studio',
+            'category' => 'not_a_real_category',
+            'location' => '42 King St, Perth WA',
+        ]);
+
+        $response->assertUnprocessable();
+    }
+
+    public function test_the_salon_list_can_be_filtered_by_category(): void
+    {
+        $hairSalon = Salon::factory()->create(['category' => 'hair']);
+        Salon::factory()->create(['category' => 'nails']);
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/salons?category=hair');
+
+        $response->assertOk();
+        $response->assertJsonCount(1);
+        $response->assertJsonFragment(['id' => $hairSalon->id]);
+    }
+
+    public function test_a_salon_owner_can_change_their_category(): void
+    {
+        $salon = Salon::factory()->create(['category' => 'hair']);
+        Sanctum::actingAs($salon->user);
+
+        $response = $this->patchJson('/api/salons', ['category' => 'spa']);
+
+        $response->assertOk();
+        $this->assertDatabaseHas('salons', ['id' => $salon->id, 'category' => 'spa']);
+    }
 }

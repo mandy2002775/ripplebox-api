@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SalonCategory;
 use App\Enums\SubscriptionStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,6 +19,7 @@ class Salon extends Model
     protected $fillable = [
         'user_id',
         'business_name',
+        'category',
         'location',
         'google_place_id',
         'website',
@@ -29,6 +31,7 @@ class Salon extends Model
     protected function casts(): array
     {
         return [
+            'category' => SalonCategory::class,
             'subscription_status' => SubscriptionStatus::class,
         ];
     }

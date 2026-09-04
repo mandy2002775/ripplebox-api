@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\SalonCategory;
 use App\Enums\UserType;
 use App\Http\Controllers\Controller;
 use App\Models\Salon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class SalonController extends Controller
@@ -17,17 +19,24 @@ class SalonController extends Controller
      * which pairs each salon with a distance and a headline reward — no
      * geo-distance sort yet, that needs Google Places, which isn't wired
      * up, but the reward preview is real: each salon's highest-value
-     * active reward, if it has one).
+     * active reward, if it has one). Optionally scoped to one category.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $salons = Salon::orderBy('business_name')
+        $data = $request->validate([
+            'category' => ['sometimes', Rule::enum(SalonCategory::class)],
+        ]);
+
+        $salons = Salon::query()
+            ->when($data['category'] ?? null, fn ($q, $category) => $q->where('category', $category))
+            ->orderBy('business_name')
             ->with(['rewards' => fn ($q) => $q->where('is_active', true)->orderByDesc('reward_value')->limit(1)])
-            ->get(['id', 'business_name', 'location', 'logo_url']);
+            ->get(['id', 'business_name', 'category', 'location', 'logo_url']);
 
         return response()->json($salons->map(fn (Salon $salon) => [
             'id' => $salon->id,
             'business_name' => $salon->business_name,
+            'category' => $salon->category,
             'location' => $salon->location,
             'logo_url' => $salon->logo_url,
             'top_reward' => $salon->rewards->first()?->description,
@@ -57,6 +66,7 @@ class SalonController extends Controller
 
         $data = $request->validate([
             'business_name' => ['required', 'string', 'max:255'],
+            'category' => ['nullable', Rule::enum(SalonCategory::class)],
             'location' => ['required', 'string', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
             'instagram_handle' => ['nullable', 'string', 'max:255'],
@@ -103,6 +113,7 @@ class SalonController extends Controller
 
         $data = $request->validate([
             'business_name' => ['sometimes', 'string', 'max:255'],
+            'category' => ['nullable', Rule::enum(SalonCategory::class)],
             'location' => ['sometimes', 'string', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
             'instagram_handle' => ['nullable', 'string', 'max:255'],
