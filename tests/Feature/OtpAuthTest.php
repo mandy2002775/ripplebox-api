@@ -237,6 +237,23 @@ class OtpAuthTest extends TestCase
         $response->assertJsonPath('user.user_type', 'salon');
     }
 
+    public function test_the_admin_demo_number_also_gets_a_fixed_code_and_can_verify(): void
+    {
+        config(['services.admin_demo.phone_number' => '+61400000001', 'services.admin_demo.code' => '046242']);
+
+        $this->postJson('/api/auth/otp/request', ['phone_number' => '+61400000001'])->assertOk();
+
+        $response = $this->postJson('/api/auth/otp/verify', [
+            'phone_number' => '+61400000001',
+            'code' => '046242',
+            'name' => 'Kate Dawes',
+            'user_type' => 'admin',
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('user.user_type', 'admin');
+    }
+
     public function test_the_app_review_and_demo_salon_bypasses_are_independent(): void
     {
         config([

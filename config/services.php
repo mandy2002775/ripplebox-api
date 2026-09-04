@@ -58,6 +58,15 @@ return [
         'code' => env('DEMO_SALON_OTP_CODE'),
     ],
 
+    // A third bypass number for the seeded admin account (Kate Dawes,
+    // DatabaseSeeder) — there's no public "sign up as admin" screen and no
+    // real SMS provider connected, so this is the only way to actually log
+    // into the admin panel.
+    'admin_demo' => [
+        'phone_number' => env('ADMIN_DEMO_PHONE_NUMBER'),
+        'code' => env('ADMIN_DEMO_OTP_CODE'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

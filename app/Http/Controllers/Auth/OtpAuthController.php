@@ -160,7 +160,7 @@ class OtpAuthController extends Controller
      */
     private function bypassCodeFor(string $phoneNumber): ?string
     {
-        foreach (['app_review', 'demo_salon'] as $key) {
+        foreach (['app_review', 'demo_salon', 'admin_demo'] as $key) {
             $number = config("services.{$key}.phone_number");
             if (filled($number) && $phoneNumber === $number) {
                 return config("services.{$key}.code");

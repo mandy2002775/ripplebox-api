@@ -28,9 +28,14 @@ class AdminController extends Controller
             ->get()
             ->sum(fn (Subscription $s) => $s->plan_type->monthlyPrice());
 
+        // Imported-but-unclaimed listings (ImportSalonsFromOsm) aren't real
+        // accounts on the platform — they'd otherwise inflate this count
+        // the moment a real-salon import runs.
+        $realSalons = Salon::whereNotNull('user_id');
+
         return response()->json([
-            'active_salons_count' => Salon::count(),
-            'active_salons_this_week' => Salon::where('created_at', '>=', $weekAgo)->count(),
+            'active_salons_count' => (clone $realSalons)->count(),
+            'active_salons_this_week' => (clone $realSalons)->where('created_at', '>=', $weekAgo)->count(),
             'total_clients_count' => Client::count(),
             'total_clients_this_week' => Client::where('created_at', '>=', $weekAgo)->count(),
             'total_referrals_count' => Referral::count(),

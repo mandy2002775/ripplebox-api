@@ -46,6 +46,20 @@ class AdminTest extends TestCase
         $response->assertJsonPath('total_referrals_count', 1);
     }
 
+    public function test_imported_unclaimed_salons_dont_count_toward_active_salons(): void
+    {
+        $admin = User::factory()->create(['user_type' => UserType::Admin]);
+        Salon::factory()->create();
+        Salon::factory()->create(['user_id' => null, 'source' => 'osm_import']);
+        Salon::factory()->create(['user_id' => null, 'source' => 'osm_import']);
+
+        Sanctum::actingAs($admin);
+        $response = $this->getJson('/api/admin/stats');
+
+        $response->assertOk();
+        $response->assertJsonPath('active_salons_count', 1);
+    }
+
     public function test_an_admin_can_view_recent_subscriptions(): void
     {
         $admin = User::factory()->create(['user_type' => UserType::Admin]);
