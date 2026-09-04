@@ -72,6 +72,13 @@ return [
         'secret' => env('WEBSITE_WEBHOOK_SECRET'),
     ],
 
+    // Shared secret to trigger a real-salon OpenStreetMap import on
+    // production (see SalonImportController) — there's no shell access
+    // there to run `salons:import-osm` directly.
+    'salon_import' => [
+        'secret' => env('SALON_IMPORT_SECRET'),
+    ],
+
     // Where the app itself lives, for real (non-dead) links in
     // transactional emails (FR-10) — the client's original complaint was
     // that welcome-email links didn't work at all.

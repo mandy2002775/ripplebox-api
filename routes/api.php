@@ -28,6 +28,12 @@ Route::prefix('auth/otp')->group(function () {
 Route::post('/webhooks/salon-signup', [WebhookController::class, 'salonSignup'])
     ->middleware('throttle:30,1');
 
+// Triggers a real-salon OpenStreetMap import — production has no shell
+// access to run `salons:import-osm` directly. Shared-secret protected,
+// same pattern as the webhook above.
+Route::post('/internal/salons/import-osm', \App\Http\Controllers\Api\SalonImportController::class)
+    ->middleware('throttle:20,1');
+
 // Public marketing-site signup form — no shared secret, since a public form
 // can be called by anyone. Only ever captures a lead, never a real account.
 Route::post('/leads', [LeadController::class, 'store'])
