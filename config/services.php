@@ -33,7 +33,11 @@ return [
     'twilio' => [
         'sid' => env('TWILIO_ACCOUNT_SID'),
         'token' => env('TWILIO_AUTH_TOKEN'),
-        'from' => env('TWILIO_FROM_NUMBER'),
+        // Verify Service SID (starts with "VA...") — OTP delivery goes
+        // through Twilio Verify's "custom code" mode rather than a raw SMS
+        // send, so it isn't subject to A2P 10DLC brand/campaign
+        // registration the way a Messaging Service number is.
+        'verify_sid' => env('TWILIO_VERIFY_SERVICE_SID'),
     ],
 
     // Apple/Google reviewers can't receive a real SMS, so sign-in is

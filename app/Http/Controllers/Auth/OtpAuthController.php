@@ -54,7 +54,7 @@ class OtpAuthController extends Controller
         // ahead of time instead.
         if (! $bypassCode) {
             try {
-                $this->sms->send($data['phone_number'], "Your Ripplebox code is {$code}. It expires in 10 minutes.");
+                $this->sms->send($data['phone_number'], $code);
             } catch (RuntimeException) {
                 // The OTP row above is already invalidated-then-recreated, so a
                 // failed send here can't be silently reported as success — the
