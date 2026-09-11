@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\SalonClientController;
 use App\Http\Controllers\Api\SalonFavoriteController;
 use App\Http\Controllers\Api\SalonController;
 use App\Http\Controllers\Api\SalonDashboardController;
+use App\Http\Controllers\Api\StripeWebhookController;
 use App\Http\Controllers\Api\SubscriptionController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Auth\OtpAuthController;
@@ -27,6 +28,9 @@ Route::prefix('auth/otp')->group(function () {
 
 Route::post('/webhooks/salon-signup', [WebhookController::class, 'salonSignup'])
     ->middleware('throttle:30,1');
+
+Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])
+    ->middleware('throttle:60,1');
 
 // Triggers a real-salon OpenStreetMap import — production has no shell
 // access to run `salons:import-osm` directly. Shared-secret protected,
@@ -57,6 +61,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/salons/{salon}/favorite', [SalonFavoriteController::class, 'toggle']);
     Route::post('/salons/subscription', [SubscriptionController::class, 'store']);
     Route::delete('/salons/subscription', [SubscriptionController::class, 'destroy']);
+    Route::post('/salons/checkout', [SubscriptionController::class, 'checkout']);
+    Route::post('/salons/checkout/confirm', [SubscriptionController::class, 'confirmCheckout']);
 
     Route::get('/rewards', [RewardController::class, 'index']);
     Route::post('/rewards', [RewardController::class, 'store']);

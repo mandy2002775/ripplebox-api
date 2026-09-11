@@ -92,6 +92,14 @@ return [
         'secret' => env('SALON_IMPORT_SECRET'),
     ],
 
+    // Real subscription billing (replaces the mock card UI). Test-mode keys
+    // are enough for the capstone demo — no live charges, no business
+    // verification with Stripe required.
+    'stripe' => [
+        'secret' => env('STRIPE_SECRET_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+    ],
+
     // Where the app itself lives, for real (non-dead) links in
     // transactional emails (FR-10) — the client's original complaint was
     // that welcome-email links didn't work at all.
