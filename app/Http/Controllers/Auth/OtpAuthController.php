@@ -12,6 +12,7 @@ use App\Services\SmsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -39,30 +40,41 @@ class OtpAuthController extends Controller
             ->whereNull('consumed_at')
             ->delete();
 
-        $bypassCode = $this->bypassCodeFor($data['phone_number']);
-
-        $code = $bypassCode ?? (string) random_int(100000, 999999);
-
-        OtpCode::create([
-            'phone_number' => $data['phone_number'],
-            'code' => Hash::make($code),
-            'expires_at' => now()->addMinutes(10),
-        ]);
-
         // Designated demo/reviewer numbers can't receive a real text, so
-        // they never go through SMS at all — their code is fixed and known
-        // ahead of time instead.
-        if (! $bypassCode) {
+        // they never go through Twilio at all — their code is fixed and
+        // known ahead of time instead. Everyone else, once Twilio is
+        // configured, gets a Twilio Verify-generated code checked via
+        // SmsService::check() rather than one we generate and hash
+        // ourselves (our account isn't enabled for Verify's custom-code
+        // feature).
+        $bypassCode = $this->bypassCodeFor($data['phone_number']);
+        $managedByTwilio = ! $bypassCode && $this->sms->isConfigured();
+
+        $code = null;
+
+        if (! $managedByTwilio) {
+            $code = $bypassCode ?? (string) random_int(100000, 999999);
+
+            OtpCode::create([
+                'phone_number' => $data['phone_number'],
+                'code' => Hash::make($code),
+                'expires_at' => now()->addMinutes(10),
+            ]);
+        }
+
+        if ($managedByTwilio) {
             try {
-                $this->sms->send($data['phone_number'], $code);
+                $this->sms->start($data['phone_number']);
             } catch (RuntimeException) {
-                // The OTP row above is already invalidated-then-recreated, so a
-                // failed send here can't be silently reported as success — the
-                // user would be stuck with a code that never arrived.
+                // The OTP row above is already invalidated, so a failed send
+                // here can't be silently reported as success — the user
+                // would be stuck with a code that never arrived.
                 throw ValidationException::withMessages([
                     'phone_number' => "Couldn't send a code to that number right now. Please try again shortly.",
                 ]);
             }
+        } elseif (! $bypassCode) {
+            Log::info("[SMS not configured — logging only] To {$data['phone_number']}: code {$code}");
         }
 
         return response()->json([
@@ -104,19 +116,27 @@ class OtpAuthController extends Controller
             ],
         ]);
 
-        $otp = OtpCode::where('phone_number', $data['phone_number'])
-            ->whereNull('consumed_at')
-            ->where('expires_at', '>', now())
-            ->latest('id')
-            ->first();
+        if (! $isBypassNumber && $this->sms->isConfigured()) {
+            if (! $this->sms->check($data['phone_number'], $data['code'])) {
+                throw ValidationException::withMessages([
+                    'code' => 'That code is invalid or has expired.',
+                ]);
+            }
+        } else {
+            $otp = OtpCode::where('phone_number', $data['phone_number'])
+                ->whereNull('consumed_at')
+                ->where('expires_at', '>', now())
+                ->latest('id')
+                ->first();
 
-        if (! $otp || ! Hash::check($data['code'], $otp->code)) {
-            throw ValidationException::withMessages([
-                'code' => 'That code is invalid or has expired.',
-            ]);
+            if (! $otp || ! Hash::check($data['code'], $otp->code)) {
+                throw ValidationException::withMessages([
+                    'code' => 'That code is invalid or has expired.',
+                ]);
+            }
+
+            $otp->update(['consumed_at' => now()]);
         }
-
-        $otp->update(['consumed_at' => now()]);
 
         $user = $existingUser ?? User::create([
             'phone_number' => $data['phone_number'],
