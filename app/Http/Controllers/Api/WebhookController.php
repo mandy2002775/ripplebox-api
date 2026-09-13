@@ -85,7 +85,15 @@ class WebhookController extends Controller
         });
 
         if ($data['email'] ?? null) {
-            Mail::to($data['email'])->send(new WelcomeSalonMail($salon));
+            // A welcome email is nice-to-have, not a reason to fail an
+            // otherwise-successful account provision — a mail-provider
+            // outage must never break the real signup this webhook exists
+            // to guarantee (FR-15).
+            try {
+                Mail::to($data['email'])->send(new WelcomeSalonMail($salon));
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return response()->json($salon->load('subscription'), 201);

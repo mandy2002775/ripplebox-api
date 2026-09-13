@@ -153,7 +153,14 @@ class OtpAuthController extends Controller
         }
 
         if (! $existingUser && $user->email) {
-            Mail::to($user->email)->send(new RegistrationMail($user));
+            // A welcome email is nice-to-have, not a reason to fail an
+            // otherwise-successful signup — a mail-provider outage must
+            // never leave a real user unable to create an account.
+            try {
+                Mail::to($user->email)->send(new RegistrationMail($user));
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         $token = $user->createToken('mobile')->plainTextToken;

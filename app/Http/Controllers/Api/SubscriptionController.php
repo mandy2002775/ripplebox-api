@@ -73,7 +73,13 @@ class SubscriptionController extends Controller
         }
 
         if ($salon->user->email) {
-            Mail::to($salon->user->email)->send(new WelcomeSalonMail($salon));
+            // A welcome email is nice-to-have, not a reason to fail an
+            // otherwise-successful subscription.
+            try {
+                Mail::to($salon->user->email)->send(new WelcomeSalonMail($salon));
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return response()->json($subscription, 201);

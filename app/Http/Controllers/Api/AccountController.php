@@ -37,7 +37,13 @@ class AccountController extends Controller
         // is: the first time an email becomes attached to an already
         // OTP-verified account.
         if ($hadNoEmailBefore && $user->email) {
-            Mail::to($user->email)->send(new RegistrationMail($user));
+            // A welcome email is nice-to-have, not a reason to fail an
+            // otherwise-successful profile update.
+            try {
+                Mail::to($user->email)->send(new RegistrationMail($user));
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return response()->json($user->load(['client', 'salon.subscription']));

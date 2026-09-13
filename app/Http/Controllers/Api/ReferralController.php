@@ -182,7 +182,13 @@ class ReferralController extends Controller
             ]);
 
             if ($recipient->email) {
-                Mail::to($recipient->email)->send(new RewardEarnedMail($recipient, $reward, $salon));
+                // A reward-earned email is nice-to-have, not a reason to
+                // fail an otherwise-successful redemption.
+                try {
+                    Mail::to($recipient->email)->send(new RewardEarnedMail($recipient, $reward, $salon));
+                } catch (\Throwable $e) {
+                    report($e);
+                }
             }
         }
 
