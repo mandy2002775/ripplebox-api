@@ -125,10 +125,15 @@ class SubscriptionController extends Controller
         try {
             $stripe = new StripeClient(config('services.stripe.secret'));
 
-            $session = $stripe->checkout->sessions->create([
+            $session = $stripe->checkout->sessions->create(array_filter([
                 'mode' => 'subscription',
                 'client_reference_id' => $salon->id,
-                'customer_email' => $request->user()->email,
+                // Bypass/demo accounts (used for reviewer and internal testing)
+                // never collect an email, and Stripe rejects an empty string
+                // as an invalid email address rather than treating it as
+                // absent — omit the key entirely when there's nothing real
+                // to send.
+                'customer_email' => $request->user()->email ?: null,
                 'metadata' => ['salon_id' => $salon->id, 'plan_type' => $plan->value],
                 'line_items' => [[
                     'quantity' => 1,
@@ -145,7 +150,7 @@ class SubscriptionController extends Controller
                 ],
                 'success_url' => $data['success_url'].(str_contains($data['success_url'], '?') ? '&' : '?').'session_id={CHECKOUT_SESSION_ID}',
                 'cancel_url' => $data['cancel_url'],
-            ]);
+            ]));
         } catch (ApiErrorException $e) {
             report($e);
 
