@@ -134,6 +134,10 @@ class SubscriptionController extends Controller
             $session = $stripe->checkout->sessions->create(array_filter([
                 'mode' => 'subscription',
                 'client_reference_id' => $salon->id,
+                // Stripe's newer "Managed Payments" is on by default for new
+                // accounts and requires a tax code on every product unless
+                // explicitly disabled — this project doesn't use Stripe Tax.
+                'managed_payments' => ['enabled' => false],
                 // Bypass/demo accounts (used for reviewer and internal testing)
                 // never collect an email, and Stripe rejects an empty string
                 // as an invalid email address rather than treating it as
