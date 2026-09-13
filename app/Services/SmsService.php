@@ -51,7 +51,7 @@ class SmsService
 
             $result = $client->verify->v2->services(config('services.twilio.verify_sid'))
                 ->verificationChecks
-                ->create($code, ['to' => $toPhoneNumber]);
+                ->create(['code' => $code, 'to' => $toPhoneNumber]);
 
             return $result->status === 'approved';
         } catch (TwilioException $e) {
